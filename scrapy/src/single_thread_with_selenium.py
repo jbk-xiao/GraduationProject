@@ -153,30 +153,9 @@ def get_message_detail(driver, detail_url, writer, leader_name):
         label2 = label_elements[0].text.strip()
     message_content = WebDriverWait(driver, 1.5).until(
         lambda driver: driver.find_element(By.XPATH, "/html/body/div[6]/p")).text.strip()
-    # replier = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_element_by_xpath("/html/body/div[8]/ul/li[1]/h3[1]/i")).text.strip()
-    # reply_content = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_element_by_xpath("/html/body/div[8]/ul/li[1]/p")).text.strip()
-    # reply_date_temp = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_element_by_xpath("/html/body/div[8]/ul/li[1]/h3[2]/em")).text
-    # reply_date = re.search(r'\d{4}-\d{2}-\d{2}', reply_date_temp).group()
-    # review_scores = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_elements_by_xpath("/html/body/div[8]/ul/li[2]/h4[1]/span/span/span"))
-    # resolve_degree = review_scores[0].text.strip()[:-1]
-    # handle_atti = review_scores[1].text.strip()[:-1]
-    # handle_speed = review_scores[2].text.strip()[:-1]
-    # review_content = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_element_by_xpath("/html/body/div[8]/ul/li[2]/p")).text.strip()
-    # is_auto_review = '是' if (('自动默认好评' in review_content) or ('默认评价' in review_content)) else '否'
-    # review_date_temp = WebDriverWait(driver, 2.5).until(
-    #     lambda driver: driver.find_element_by_xpath("/html/body/div[8]/ul/li[2]/h4[2]/em")).text
-    # review_date = re.search(r'\d{4}-\d{2}-\d{2}', review_date_temp).group()
     # 存入CSV文件
     writer.writerow(
         [leader_name, tid, message_title, label1, label2, message_date, message_time, message_content])
-    # , replier, reply_content, reply_date,
-    # satis_degree,
-    # resolve_degree, handle_atti, handle_speed, is_auto_review, review_content, review_date])
 
 
 def get_officer_messages(index, fid):
@@ -200,9 +179,13 @@ def get_officer_messages(index, fid):
         writer = csv.writer(f, dialect="excel")
         writer.writerow(
             ['leader_name', 'tid', 'message_title', 'label1', 'label2', 'message_date', 'message_time', 'message_content'])
+        i = 0
         for detail_url in get_detail_urls(leader_name, list_url):
             get_message_detail(driver, detail_url, writer, leader_name)
-            time.sleep(get_time())
+            i += 1
+            if i % 50 == 0:
+                print("第{}条，当前时间是{}".format(i, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())))
+                time.sleep(get_time())
     end_time = time.time()
     crawl_time = int(end_time - start_time)
     crawl_minute = crawl_time // 60

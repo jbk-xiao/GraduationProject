@@ -7,7 +7,8 @@ GraduationProject
 ├─scrapy    //爬虫部分
 │   └─src
 │       ├─url_fid.txt       //广州市所有领导的fid，用于形成url
-│       └─single_thread_with_selenium.py       //单线程＋selenium
+│       ├─multiple_thread_with_selenium.py      //多线程+selenium（推荐）
+│       └─single_thread_with_selenium.py        //单线程+selenium
 └─README.md
 ```
 

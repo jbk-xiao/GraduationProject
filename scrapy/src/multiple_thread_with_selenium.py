@@ -3,10 +3,12 @@ import os
 import random
 import re
 import time
+import threading
 
 import dateutil.parser as dparser
 from random import choice
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -15,6 +17,8 @@ from selenium.webdriver.chrome.options import Options
 # 全局变量和参数配置
 # 时间节点
 start_date = dparser.parse('2021-12-07')
+# 控制同时运行的线程数
+sem = threading.Semaphore(3)
 # 浏览器设置选项
 chrome_options = Options()
 chrome_options.add_argument('blink-settings=imagesEnabled=false')
@@ -96,39 +100,35 @@ def get_detail_urls(leader_name, list_url):
     drivertemp.get(list_url)
     time.sleep(2)
     # 循环加载页面
-    while True:
-        datestr = WebDriverWait(drivertemp, 10).until(
-            lambda driver: driver.find_element(
-                By.XPATH, '//*[@id="list_content"]/li[position()=last()]/h3/span'
-            )
-        ).text.strip()
-        datestr = re.search(r'\d{4}-\d{2}-\d{2}', datestr).group()
-        date = dparser.parse(datestr, fuzzy=True)
-        print('正在爬取链接 --', leader_name, '--', date)
-        if date < start_date:
-            break
-        # 模拟点击加载
-        try:
-            WebDriverWait(drivertemp, 50, 2).until(EC.element_to_be_clickable((By.ID, "show_more")))
-            drivertemp.execute_script('window.scrollTo(document.body.scrollHeight, document.body.scrollHeight - 600)')
-            time.sleep(get_time())
-            drivertemp.execute_script('window.scrollTo(document.body.scrollHeight - 600, document.body.scrollHeight)')
-            WebDriverWait(drivertemp, 50, 2).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="show_more"]')))
+    try:
+        while WebDriverWait(drivertemp, 50, 2).until(EC.element_to_be_clickable((By.ID, "show_more"))):
+            datestr = WebDriverWait(drivertemp, 10).until(
+                lambda driver: driver.find_element(
+                    By.XPATH, '//*[@id="list_content"]/li[position()=last()]/h3/span')
+            ).text.strip()
+            datestr = re.search(r'\d{4}-\d{2}-\d{2}', datestr).group()
+            date = dparser.parse(datestr, fuzzy=True)
+            print('正在爬取链接 --', leader_name, '--', date)
+            if date < start_date:
+                break
+            # 模拟点击加载
             drivertemp.find_element(By.XPATH, '//*[@id="show_more"]').click()
-        except:
-            break
-        time.sleep(get_time() - 1)
-    detail_elements = drivertemp.find_elements(By.XPATH, '//*[@id="list_content"]/li/h2/b/a')
-    # 获取所有链接
-    for element in detail_elements:
-        detail_url = element.get_attribute('href')
-        yield detail_url
-    drivertemp.quit()
+            time.sleep(get_time())
+        detail_elements = drivertemp.find_elements(By.XPATH, '//*[@id="list_content"]/li/h2/b/a')
+        # 获取所有链接
+        for element in detail_elements:
+            detail_url = element.get_attribute('href')
+            yield detail_url
+        drivertemp.quit()
+    except TimeoutException:  # 超时时递归调用
+        drivertemp.quit()
+        get_detail_urls(leader_name, list_url)
 
 
-def get_message_detail(driver, detail_url, writer, leader_name):
+def get_message_detail(driver, detail_url, writer, leader_name, i):
     """获取留言详情"""
-    print('正在爬取留言 --', leader_name, '--', detail_url)
+    if i % 50 == 0:
+        print('正在爬取第{}留言 --{}--{}'.format(i, leader_name, detail_url))
     driver.get(detail_url)
     message_date_temp = WebDriverWait(driver, 1.5).until(
         lambda driver: driver.find_element(By.XPATH, "/html/body/div[6]/h3/span")).text
@@ -163,38 +163,42 @@ def get_officer_messages(index, fid):
     chrome_options.add_argument('user-agent=%s' % user_agent)
     driver = webdriver.Chrome(options=chrome_options)
     list_url = "http://liuyan.people.com.cn/threads/list?fid={}#state=1".format(fid)
-    driver.get(list_url)
-    leader_name = WebDriverWait(driver, 10).until(
-        lambda driver: driver.find_element(By.XPATH, "/html/body/div[4]/i")).text
-    # time.sleep(get_time())
-    print(index, '-- 正在爬取 --', leader_name)
-    start_time = time.time()
-    # encoding='gb18030'
-    csv_name = leader_name + '.csv'
-    # 文件存在则删除重新创建
-    if os.path.exists(csv_name):
-        os.remove(csv_name)
-    with open(csv_name, 'a+', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f, dialect="excel")
-        writer.writerow(
-            ['leader_name', 'tid', 'message_title', 'label1',
-             'label2', 'message_date', 'message_time', 'message_content']
-        )
-        i = 0
-        for detail_url in get_detail_urls(leader_name, list_url):
-            get_message_detail(driver, detail_url, writer, leader_name)
-            i += 1
-            if i % 50 == 0:
-                print("第{}条，当前时间是{}".format(i, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())))
-                time.sleep(get_time())
-    end_time = time.time()
-    crawl_time = int(end_time - start_time)
-    crawl_minute = crawl_time // 60
-    crawl_second = crawl_time % 60
-    print(leader_name, '已爬取结束！！！共', i, '条')
-    print('共计用时：{}分钟{}秒。'.format(crawl_minute, crawl_second))
-    driver.quit()
-    time.sleep(5)
+    try:
+        driver.get(list_url)
+        leader_name = WebDriverWait(driver, 10).until(
+            lambda driver: driver.find_element(By.XPATH, "/html/body/div[4]/i")).text
+        # time.sleep(get_time())
+        print(index, '-- 正在爬取 --', leader_name)
+        start_time = time.time()
+        # encoding='gb18030'
+        csv_name = leader_name + '.csv'
+        # 文件存在则删除重新创建
+        if os.path.exists(csv_name):
+            os.remove(csv_name)
+        with open(csv_name, 'a+', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f, dialect="excel")
+            writer.writerow(
+                ['leader_name', 'tid', 'message_title', 'label1',
+                 'label2', 'message_date', 'message_time', 'message_content']
+            )
+            i = 0
+            for detail_url in get_detail_urls(leader_name, list_url):
+                i += 1
+                get_message_detail(driver, detail_url, writer, leader_name, i)
+                if i % 50 == 0:
+                    print("第{}条，当前时间是{}".format(i, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())))
+                    time.sleep(get_time())
+        end_time = time.time()
+        crawl_time = int(end_time - start_time)
+        crawl_minute = crawl_time // 60
+        crawl_second = crawl_time % 60
+        print(leader_name, '已爬取结束！！！共', i, '条')
+        print('共计用时：{}分钟{}秒。'.format(crawl_minute, crawl_second))
+        driver.quit()
+        time.sleep(5)
+    except:
+        driver.quit();
+        get_officer_messages(index, fid)
 
 
 def merge_csv():
@@ -230,11 +234,39 @@ def main():
     fids = get_fid()
     print('爬虫程序开始执行：')
     s_time = time.time()
+    thread_list = []
+    # 将所有线程加入线程列表，便于控制同时执行的线程数量
     for index, fid in enumerate(fids):
+        t = threading.Thread(target=get_officer_messages, args=(index + 1, fid))
+        thread_list.append([t, fid])
+    for thread, fid in thread_list:
+        # 5层嵌套进行异常处理
         try:
-            get_officer_messages(index + 1, fid)
+            thread.start()
         except:
-            get_officer_messages(index + 1, fid)
+            try:
+                thread.start()
+            except:
+                try:
+                    thread.start()
+                except:
+                    try:
+                        thread.start()
+                    except:
+                        try:
+                            thread.start()
+                        except:
+                            # 如果仍出现异常加入失败名单
+                            print('该leader爬取失败，已存入失败名单，以备再爬')
+                            if not os.path.exists('fid_not_success.txt'):
+                                with open('fid_not_success.txt', 'a+') as f:
+                                    f.write(fid)
+                            else:
+                                with open('fid_not_success.txt', 'a+') as f:
+                                    f.write('\n' + fid)
+                            continue
+    for thread, fid in thread_list:
+        thread.join()
     print('爬虫程序执行结束！！！')
     print('开始合成文件：')
     merge_csv()

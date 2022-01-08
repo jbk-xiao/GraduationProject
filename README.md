@@ -8,7 +8,8 @@ GraduationProject
 │   └─src
 │       ├─url_fid.txt       //广州市所有领导的fid，用于形成url
 │       ├─single_thread_with_selenium.py        //单线程+selenium
-│       └─multiple_thread_with_selenium.py      //多线程+selenium
+│       ├─multiple_thread_with_selenium.py      //多线程+selenium
+│       └─multiple_process_with_selenium.py     //多进程+selenium
 └─README.md
 ```
 
@@ -27,4 +28,4 @@ GraduationProject
    > 单线程+selenium版，运行较慢但数据不易出错\
    > 多线程+selenium版，当线程池设置为3时，由于多个fid对应的链接可同时进行爬取，因此速度较快\
    > 但由于多个线程之间数据不安全，以及会出现线程饥饿，容易发生数据缺失\
-   > 
+   > 多进程+selenium版，按理来说应该比较安全，但是像上边一样出现了某领导的全部数据缺失，难道是触发了反爬机制？

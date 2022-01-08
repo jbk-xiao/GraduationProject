@@ -10,14 +10,18 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.edge.options import Options
+from selenium.webdriver.chrome.options import Options
 
 # 全局变量和参数配置
 # 时间节点
-start_date = dparser.parse('2022-01-07')
+start_date = dparser.parse('2021-12-01')
 # 浏览器设置选项
-edge_options = Options()
-edge_options.add_argument('blink-settings=imagesEnabled=false')
+chrome_options = Options()
+chrome_options.add_argument('blink-settings=imagesEnabled=false')
+chrome_options.add_argument("--headless")  # 为浏览器配置无头模式 后台运行
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--disable-dev-shm-usage')
 
 
 def get_time():
@@ -57,16 +61,16 @@ def get_user_agent():
         "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E)",
         "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1",
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1",
-        "Mozilla/5.0 (iPad; U; CPU OS 4_2_1 like Mac OS X; zh-cn) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148 Safari/6533.18.5",
+        # "Mozilla/5.0 (iPad; U; CPU OS 4_2_1 like Mac OS X; zh-cn) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148 Safari/6533.18.5",
         "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:2.0b13pre) Gecko/20110307 Firefox/4.0b13pre",
         "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:16.0) Gecko/20100101 Firefox/16.0",
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
         "Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10",
-        "MQQBrowser/26 Mozilla/5.0 (Linux; U; Android 2.3.7; zh-cn; MB200 Build/GRJ22; CyanogenMod-7) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
-        "Mozilla/5.0 (Linux; Android 5.1.1; Nexus 6 Build/LYZ28E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.23 Mobile Safari/537.36",
-        "Mozilla/5.0 (iPod; U; CPU iPhone OS 2_1 like Mac OS X; ja-jp) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5F137 Safari/525.20",
-        "Mozilla/5.0 (Linux;u;Android 4.2.2;zh-cn;) AppleWebKit/534.46 (KHTML,like Gecko) Version/5.1 Mobile Safari/10600.6.3 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)",
+        # "MQQBrowser/26 Mozilla/5.0 (Linux; U; Android 2.3.7; zh-cn; MB200 Build/GRJ22; CyanogenMod-7) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+        # "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
+        # "Mozilla/5.0 (Linux; Android 5.1.1; Nexus 6 Build/LYZ28E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.23 Mobile Safari/537.36",
+        # "Mozilla/5.0 (iPod; U; CPU iPhone OS 2_1 like Mac OS X; ja-jp) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5F137 Safari/525.20",
+        # "Mozilla/5.0 (Linux;u;Android 4.2.2;zh-cn;) AppleWebKit/534.46 (KHTML,like Gecko) Version/5.1 Mobile Safari/10600.6.3 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)",
         "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html）"
     ]
     # 在user_agent列表中随机产生一个代理，作为模拟的浏览器
@@ -86,8 +90,8 @@ def get_fid():
 def get_detail_urls(leader_name, list_url):
     """获取每个领导的所有留言链接"""
     user_agent = get_user_agent()
-    edge_options.add_argument('user-agent=%s' % user_agent)
-    drivertemp = webdriver.Edge(options=edge_options)
+    chrome_options.add_argument('user-agent=%s' % user_agent)
+    drivertemp = webdriver.Chrome(options=chrome_options)
     drivertemp.maximize_window()
     drivertemp.get(list_url)
     time.sleep(2)
@@ -161,8 +165,8 @@ def get_message_detail(driver, detail_url, writer, leader_name):
 def get_officer_messages(index, fid):
     """获取并保存领导的所有留言"""
     user_agent = get_user_agent()
-    edge_options.add_argument('user-agent=%s' % user_agent)
-    driver = webdriver.Edge(options=edge_options)
+    chrome_options.add_argument('user-agent=%s' % user_agent)
+    driver = webdriver.Chrome(options=chrome_options)
     list_url = "http://liuyan.people.com.cn/threads/list?fid={}#state=1".format(fid)
     driver.get(list_url)
     leader_name = WebDriverWait(driver, 10).until(
@@ -190,7 +194,7 @@ def get_officer_messages(index, fid):
     crawl_time = int(end_time - start_time)
     crawl_minute = crawl_time // 60
     crawl_second = crawl_time % 60
-    print(leader_name, '已爬取结束！！！')
+    print(leader_name, '已爬取结束！！！共', i, '条')
     print('共计用时：{}分钟{}秒。'.format(crawl_minute, crawl_second))
     driver.quit()
     time.sleep(5)
@@ -226,8 +230,7 @@ def merge_csv():  # TODO 暂时不用管
 
 def main():
     """主函数"""
-    # fids = get_fid()
-    fids = ["1217"]
+    fids = get_fid()
     print('爬虫程序开始执行：')
     for index, fid in enumerate(fids):
         try:

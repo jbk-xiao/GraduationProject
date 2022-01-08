@@ -6,6 +6,7 @@
 GraduationProject
 ├─scrapy    //爬虫部分
 │   └─src
+│       ├─url_fid.txt       //广州市所有领导的fid，用于形成url
 │       └─single_thread_with_selenium.py       //单线程＋selenium
 └─README.md
 ```
@@ -20,4 +21,4 @@ GraduationProject
      - 安装方法：`pip install python-dateutil`
    - selenium
      - 安装方法：`pip install selenium`
-3. 模拟驱动：chromedriver或edgedriver或firfoxdriver等。到官网下载与浏览器对应的版本，放在Python安装路径下的Scripts目录下
+3. 模拟驱动：chromedriver或edgedriver或firfoxdriver等。到官网下载与浏览器对应的版本，放在Python安装路径下的Scripts目录下。（目测chrome是最快的）
